@@ -365,10 +365,16 @@ void AlsaPlayer::uninitAlsa()
 {
     if (handle_ != nullptr)
     {
+        LOG(TRACE, LOG_TAG) << "uninitAlsa - handle is null" << endl;
+        LOG(TRACE, LOG_TAG) << "uninitAlsa - before snd_pcm_drop" << endl;
         snd_pcm_drop(handle_);
+        LOG(TRACE, LOG_TAG) << "uninitAlsa - after snd_pcm_drop" << endl;
+        LOG(TRACE, LOG_TAG) << "uninitAlsa - before snd_pcm_close" << endl;
         snd_pcm_close(handle_);
+        LOG(TRACE, LOG_TAG) << "uninitAlsa - after snd_pcm_close" << endl;
         handle_ = nullptr;
     }
+    LOG(TRACE, LOG_TAG) << "uninitAlsa - done" << endl;
 }
 
 
@@ -397,9 +403,13 @@ void AlsaPlayer::uninitMixer()
 
 void AlsaPlayer::start()
 {
+    LOG(TRACE, LOG_TAG) << "start - start" << endl;
+    LOG(TRACE, LOG_TAG) << "start - before initAlsa" << endl;
     initAlsa();
+    LOG(TRACE, LOG_TAG) << "start - after initAlsa" << endl;
     if (settings_.mixer.mode == ClientSettings::Mixer::Mode::hardware)
         initMixer();
+    LOG(TRACE, LOG_TAG) << "start - before Player::start" << endl;
     Player::start();
 }
 
@@ -413,8 +423,11 @@ AlsaPlayer::~AlsaPlayer()
 void AlsaPlayer::stop()
 {
     Player::stop();
+    LOG(TRACE, LOG_TAG) << "stop - after Player::stop" << endl;
     uninitMixer();
+    LOG(TRACE, LOG_TAG) << "stop - before uninitAlsa" << endl;
     uninitAlsa();
+    LOG(TRACE, LOG_TAG) << "stop - after uninitAlsa" << endl;
 }
 
 
@@ -426,6 +439,7 @@ bool AlsaPlayer::needsThread() const
 
 void AlsaPlayer::worker()
 {
+    LOG(TRACE, LOG_TAG) << "Begin worker!" << endl;
     snd_pcm_sframes_t pcm;
     snd_pcm_sframes_t framesDelay;
     snd_pcm_sframes_t framesAvail;
@@ -445,10 +459,13 @@ void AlsaPlayer::worker()
                 chronos::sleep(100);
             }
             if (handle_ == nullptr)
+                LOG(WARNING, LOG_TAG) << "Handler is null after init!" << endl;
                 continue;
         }
 
+        LOG(TRACE, LOG_TAG) << "Before snd_pcm_wait" << endl;
         int wait_result = snd_pcm_wait(handle_, 100);
+        LOG(TRACE, LOG_TAG) << "After snd_pcm_wait, result: " << wait_result << ", "<< snd_strerror(wait_result) << endl;
         if (wait_result == -EPIPE)
         {
             LOG(ERROR, LOG_TAG) << "XRUN: " << snd_strerror(wait_result) << "\n";
@@ -465,7 +482,9 @@ void AlsaPlayer::worker()
             continue;
         }
 
+        LOG(TRACE, LOG_TAG) << "Before snd_pcm_avail_delay" << endl;
         int result = snd_pcm_avail_delay(handle_, &framesAvail, &framesDelay);
+        LOG(TRACE, LOG_TAG) << "After snd_pcm_avail_delay, result: " << result << ", "<< snd_strerror(result) << endl;
         if (result < 0)
         {
             // if (result == -EPIPE)
@@ -538,7 +557,9 @@ void AlsaPlayer::worker()
                 }
             }
         }
+        LOG(TRACE, LOG_TAG) << "End loop" << endl;
     }
+    LOG(TRACE, LOG_TAG) << "End worker!" << endl;
 }
 
 
